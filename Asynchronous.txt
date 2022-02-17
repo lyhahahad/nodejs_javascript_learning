@@ -94,8 +94,39 @@ btn.addEventListener('click', () => {
 콜백함수는 즉시 실행되지 않는다.
 모든 콜백함수가 비동기식은 아니다. foreach같은 경우에는 동기식으로 실행된다.
 
-- Promise : web api에서 사용되는 새로운 스타일의 비동기 코드
+- Promise : 미래의 어느 시점에서 반환될 것이라는 약속, 중간 상태를 나타내는 객체이다.
+기본적으로 Promise는 작업의 중간 상태를 나타내는 객체입니다. 
+사실상 어떤 종류의 결과가 미래의 어느 시점에서 반환될 것이라는 약속 입니다. 
+작업이 언제 완료되고 결과가 반환되는지 정확히 보장할 수는 없지만 결과를 사용할 수 있거나 
+약속이 실패할 때 제공한 코드가 다른 작업을 수행하기 위해 실행된다는 보장은 있습니다. 
+성공적인 결과를 얻거나 실패 사례를 정상적으로 처리합니다.
+
+이전 스타일의 콜백 문제 = 콜백 지옥
+chooseToppings(function(toppings) {
+  placeOrder(toppings, function(order) {
+    collectOrder(order, function(pizza) {
+      eatPizza(pizza);
+    }, failureCallback);
+  }, failureCallback);
+}, failureCallback);
+
+promise를 통한 개선
+chooseToppings()
+.then(toppings => placeOrder(toppings))
+.then(order => collectOrder(order))
+.then(pizza => eatPizza(pizza))
+.catch(failureCallback);
+catch함수는 앞의 모든 promise 구문의 오류를 한 번에 처리한다.
+
+-promise와 이벤트 리스너의 차이점
+promise는 한 번만 성공하거나 실패할 수 있다. 두 번의 시도는 없다.
+promise가 성공할거나 실패하고 나중에 성공/실패 콜백을 추가하면 이벤트가 더 일찍 발생했더라도 올바른 콜백이 호출됨.
+
+-기본 promise 구문 설명
+최신 web api는 긴 작업을 수행할는 기능에 사용하기 때문에 promise를 이해하는 것이 중요하다.
 
 
 
 https://stackoverflow.com/questions/7931537/whats-the-difference-between-asynchronous-non-blocking-event-base-architectu
+
+

@@ -1,0 +1,96 @@
+https://nodejs.dev/learn/the-nodejs-event-loop
+
+하이라이트
+1.단일 스레드가 호출 스택, 메시지 큐 순으로 요청을 꺼내 처리한다.
+2.오래된 콜백함수는 ex setTimeout은 브라우저가 제공하는 스레드에서 타이머를 실행한 뒤 콜백함수를 메시지큐에 enqueue한다.
+때문에 모든 호출 스택이 pop된 후에 실행된다.
+3.promise는 호출 스택에 콜백함수를 호출 스택에 push하기 때문에 오래된 비동기 함수처럼 호출 스택이 비워지지 않아도 반환된 후 바로 실행된다.
+
+nodejs javascript는 단일 스레드에서 실행된다.
+한 번에 한 가지 일만 발생한다.
+단일 스레드로 한번에 하나의 일을 처리한다는 점을 유의해 코드를 작성하자.
+
+-이벤트 루프 차단
+자바스크립트의 거의 모든 I/O는 비차단이다. 
+비차단은 일을 다른 스레드가 맡게 되면 다시 자신의 스레드로 돌아가 자신의 일을 할 수 있다는 의미이다.
+쉽게 말해 WEB API에 정보를 요청하면 반환 전까지 기다리는 것이 아니라 자신이 할 일을 한다.
+
+-호출 스택
+이벤트루프는 호출 스택을 지속적으로 확인하여 실행해야 하는 함수가 있는지 확인한다.
+
+const bar = () => console.log('bar')
+
+const baz = () => console.log('baz')
+
+const foo = () => {
+  console.log('foo')
+  setTimeout(bar, 0)
+  baz()
+}
+
+foo()
+
+위의 코드는 어떤 순서대로 출력할까?
+foo
+baz
+bar이다.
+자바스크립트는 non-blocking이기 때문에 settimeout을 실행할 때 기다리지 않는다.
+좀더 구체적으로 살펴보면
+settimeout이 호출되면 nodejs는 타이머를 시작한다.
+타이머가 만료되면 콜백함수가 메시지 큐에 추가된다.
+그 사이에 다른 코드인 baz가 추가되는 것이다.
+메인 스레드 foo->baz--------------------------------------------->bar
+브라우저에서 제공하는 자체 스레드에서 대기함--------settimeout(0)---
+루프는 호출 스택에 우선순위를 부여하고 먼저 호출 스택에서 찾은 모든 것을 처리하고 
+아무것도 없을 때 메시지 큐(대기열)에서 항목을 찾는다.
+foo------------>setTimeout->bar->메시지 queue로 이동
+메시지 queue = [baz]
+
+
+const bar = () => console.log('bar')
+
+const baz = () => console.log('baz')
+
+const foo = () => {
+  console.log('foo')
+  setTimeout(bar, 0)
+  new Promise((resolve, reject) =>
+    resolve('should be right after baz, before bar')
+  ).then(resolve => console.log(resolve))
+  baz()
+}
+
+foo()
+
+ECMAScript 2015는 Promises(ES6/ES2015에서도 도입됨)에서 사용하는 Job Queue의 개념을 도입했습니다. 비동기 함수의 결과를 호출 스택의 끝에 넣지 않고 최대한 빨리 실행하는 방법입니다.
+위의 코드의 결과는
+foo
+baz
+should be right after baz, before bar
+bar
+이것이 Promises(및 Promise를 기반으로 하는 Async/await)와 setTimeout()또는 다른 플랫폼 API를 통한 오래된 비동기 함수 사이의 큰 차이점입니다.
+
+settimeout과 같은 오래된 비동기 함수는 호출 스택이 모두 다 실행된 이후 실행되는 이벤트큐에 콜백함수를 저장하지만
+promise는 호출 스택에 push한다.
+
+-nodejs tick?
+A tick is the dequeuing of an event from the "event loop queue" and the execution of said event.2018. 2. 18.
+이벤트 큐에서 dequeue하는 것을 의미한다.
+이벤트 큐에서 dequeue를 하게 되면 해당 tick에 해당하는 함수들이 호출 스택에 쌓이고 스택이 빌 때까지 실행된다.
+호출 스택이 완전히 실행된 후에 다시 이벤트 대기열에서 값을 받아 처리한다.
+
+-nodejs process.nexttick()?
+https://nodejs.dev/learn/understanding-process-nexttick
+https://blog.outsider.ne.kr/739
+process.nextTick()은 액션의 실행을 이벤트루프의 다음 차례까지 실제로 연기합니다.
+function foo() {
+  console.log('foo');
+}
+
+process.nextTick(foo);
+console.log('bar');
+
+bar -> foo
+
+CPU 부하가 심한 작업의 실행을 다른 이벤트로 나누어 처리하기.
+
