@@ -1,0 +1,218 @@
+https://nodejs.dev/learn/the-nodejs-event-loop
+######
+1.기본 작동 방식
+mainline 시행후 eventloop를 돌면서 callback을 실행한다.
+mainline ->microtasks -> timers ->microtasks -> poll ->microtasks -> check ->microtasks -> timers ... 이런 순서대로 돈다.
+중간중간있는 pending, idle, Prepare, close은 제외함.
+timers에서는 timeout, interval이 실행된다. 만료되기전까지 다음 단계로 넘어갔다가 한바퀴돌았을때 TIMERS가 만료된 상태에서 TIMERS 페이즈에 들어왔을 때 실행됨 
+microtask에서는 process.nextTick, then()콜백이 실행된다.
+poll에서는 fs.readFile과 같은 I/O 콜백이 실행된다.
+check에서는 immediate콜백이 실행된다.
++각각의 PHASE는 FIFO QUEUE아 빌 때까지 실행된다.
+CLOSE단계 이후에는 만약 새로운 요청이 들어왔다면 다시 위의 과정을 반복한다.
+아니면 노드를 끝낸낸다.
+
+
+하이라이트
+1.단일 스레드가 호출 스택, 메시지 큐 순으로 요청을 꺼내 처리한다.
+2.오래된 콜백함수는 ex setTimeout은 브라우저가 제공하는 스레드에서 타이머를 실행한 뒤 콜백함수를 메시지큐에 enqueue한다.
+때문에 모든 호출 스택이 pop된 후에 실행된다.
+3.promise는 호출 스택에 콜백함수를 호출 스택에 push하기 때문에 오래된 비동기 함수처럼 호출 스택이 비워지지 않아도 반환된 후 바로 실행된다.
+
+nodejs javascript는 단일 스레드에서 실행된다.
+한 번에 한 가지 일만 발생한다.
+단일 스레드로 한번에 하나의 일을 처리한다는 점을 유의해 코드를 작성하자.
+
+-이벤트 루프 차단
+자바스크립트의 거의 모든 I/O는 비차단이다. 
+비차단은 일을 다른 스레드가 맡게 되면 다시 자신의 스레드로 돌아가 자신의 일을 할 수 있다는 의미이다.
+쉽게 말해 WEB API에 정보를 요청하면 반환 전까지 기다리는 것이 아니라 자신이 할 일을 한다.
+
+-호출 스택
+이벤트루프는 호출 스택을 지속적으로 확인하여 실행해야 하는 함수가 있는지 확인한다.
+
+const bar = () => console.log('bar')
+
+const baz = () => console.log('baz')
+
+const foo = () => {
+  console.log('foo')
+  setTimeout(bar, 0)
+  baz()
+}
+
+foo()
+
+위의 코드는 어떤 순서대로 출력할까?
+foo
+baz
+bar이다.
+자바스크립트는 non-blocking이기 때문에 settimeout을 실행할 때 기다리지 않는다.
+좀더 구체적으로 살펴보면
+settimeout이 호출되면 nodejs는 타이머를 시작한다.
+타이머가 만료되면 콜백함수가 메시지 큐에 추가된다.
+그 사이에 다른 코드인 baz가 추가되는 것이다.
+메인 스레드 foo->baz--------------------------------------------->bar
+브라우저에서 제공하는 자체 스레드에서 대기함--------settimeout(0)---
+루프는 호출 스택에 우선순위를 부여하고 먼저 호출 스택에서 찾은 모든 것을 처리하고 
+아무것도 없을 때 메시지 큐(대기열)에서 항목을 찾는다.
+foo------------>setTimeout->bar->메시지 queue로 이동
+메시지 queue = [baz]
+
+
+const bar = () => console.log('bar')
+
+const baz = () => console.log('baz')
+
+const foo = () => {
+  console.log('foo')
+  setTimeout(bar, 0)
+  new Promise((resolve, reject) =>
+    resolve('should be right after baz, before bar')
+  ).then(resolve => console.log(resolve))
+  baz()
+}
+
+foo()
+
+ECMAScript 2015는 Promises(ES6/ES2015에서도 도입됨)에서 사용하는 Job Queue의 개념을 도입했습니다. 비동기 함수의 결과를 호출 스택의 끝에 넣지 않고 최대한 빨리 실행하는 방법입니다.
+위의 코드의 결과는
+foo
+baz
+should be right after baz, before bar
+bar
+이것이 Promises(및 Promise를 기반으로 하는 Async/await)와 setTimeout()또는 다른 플랫폼 API를 통한 오래된 비동기 함수 사이의 큰 차이점입니다.
+
+settimeout과 같은 오래된 비동기 함수는 호출 스택이 모두 다 실행된 이후 실행되는 이벤트큐에 콜백함수를 저장하지만
+promise는 호출 스택에 push한다.
+
+-nodejs tick?
+A tick is the dequeuing of an event from the "event loop queue" and the execution of said event.2018. 2. 18.
+이벤트 큐에서 dequeue하는 것을 의미한다.
+이벤트 큐에서 dequeue를 하게 되면 해당 tick에 해당하는 함수들이 호출 스택에 쌓이고 스택이 빌 때까지 실행된다.
+호출 스택이 완전히 실행된 후에 다시 이벤트 대기열에서 값을 받아 처리한다.
+
+-nodejs process.nexttick()?
+https://nodejs.dev/learn/understanding-process-nexttick
+https://blog.outsider.ne.kr/739
+process.nextTick()은 액션의 실행을 이벤트루프의 다음 차례까지 실제로 연기합니다.
+function foo() {
+  console.log('foo');
+}
+
+process.nextTick(foo);
+console.log('bar');
+
+bar -> foo
+
+CPU 부하가 심한 작업의 실행을 다른 이벤트로 나누어 처리하기.
+
+https://developer.ibm.com/tutorials/learn-nodejs-the-event-loop/
+이벤트 루프의 단계: 수행하는 작업, 실행 순서 및 해당 단계 내에서 콜백이 실행되는 방식.
+노드 개발자로서 작성하는 대부분의 코드는 한 가지 유형 또는 다른 유형의 콜백입니다. 어떤 유형의 콜백이 어떤 단계에서 실행되는지 이해할 때까지 콜백은 예상대로 또는 원하는 순서대로 실행되지 않습니다.
+
+*worker pool https://nodejs.org/en/docs/guides/dont-block-the-event-loop/
+노드 개발자는 worker pool에 직접 엑세스할 수 없다.
+javascript가 실행되는 스레드는 작업자 풀의 일부가 아니다.
+worker pool은 내부적으로 다중 프로세서 아키텍처의 성능 향상
+JavaScript에서 작업자 풀을 실행하는 몇가지옵션
+nodejs에는 두가지 유형의 스레드가 있다.
+이벤트 루프, 작업자 풀
+스레드가 콜백(이벤트 루프), 작업(작업자 풀)을 실행하는데 오랜 기간이 걸리는 경우 이를 블록킹이라고 함.
+블록킹 되면 다른 클라이언트의 요청을 처리할 수 없게 된다.
+작업자풀은 주로 비싼 작업을 처리한다.
+cpu를 많이 사용하는 작업을 처리한다.
+
+
+*이벤트루프는 각 단계에서 콜백을 처리한다.
+개발자의 실수로 콜백이 잘못된 순서로 전달되는 경우가 많다.
+때문에 이벤트 루프를 명확히 이해해야 한다.
+
+https://developer.ibm.com/developer/default/tutorials/learn-nodejs-the-event-loop/images/figure-1.png
+노드 개발자는 mainline, timersphase, poll phase, check phase에 들어갈 코드를 작성한다.
+
+-이벤트 루프 전 : node를 시작할때 
+node는 해당 스크립트를 컨텍스트화되도록 v8엔진에 전당한다.
+js코드를 실행 가능한 c++ 코드로 변환하는 작업이 포함된다.
+컨텍스트화된 js코드는 노드 스레드에서 실행된다.
+스크립트의 메인라인은 위에서 아래로 실행된다. 
+비차단 코드들의 콜백은 모든 메인라인이 실행된후 스레드에서 실행된다.
+만약 비차단 코드가 없다면 이벤트 루프는 노드 프로세스가 종료될 때까지 아무것도 하지 않는다.
+
+-콜백 대기열
+event loop 각각의 phase는 해당 phase동안 실행할 콜백 fifo queue가 있다.
+특정 phase는 phase의 시작단계에서 실행되고 queue안에 있는 콜백은 queue가 비워질 때까지 혹은 시스템의 한계에 도달할 때까지 실행된다.
+
+-microtask : 메인라인 직후와 이벤트루프의 모든 단계 직후에 실행된다.
+process.nextTick, then() handlers가 여기에 해당하는 콜백함수이다.
+
+-timers phase : timers가 만료되면 콜백은 다음 timers phase에서 실행된다.
+immediate, timeout이 여기에 해당함.
+immediate는 다음단계에 있는 check phase에서 바로 실행된다.
+timeout은 timer가 모두 진행된 후 최대한 빠르게 콜백을 실행한다.
+timers가 끝나면 콜백은 다음 timers phase에서 실행된다.
+설정한 time보다 늦게 실행될 수 있다.
+종류는 크게 두가지 있다.
+interval, timeout 
+interval은 timer를 노드 프로세스가 살아있으면 반복적으로 실행하고 콜백도 반복적으로 실행한다.
+timeout은 한번만 실행한다.
+clear함수를 통해 둘다 멈출 수 있다.
+더이상 timers callbacks가 없다면 이벤트 루프는 micortasks를 실행한다. 
+microtask를 실행한 후 pending phase로 넘어간다.
+
+-Pending phase : 존재정도만 알아도됨.
+-Idle and Prepare phase : 내부적으로 사용되는 부분
+
+-Poll phase : I/O 콜백이 실행되는 곳
+EX) POLL PHASE에서 fs.readFile() 실행이 완료되면 콜백함수를 호출한다.
+만약 POLL QUEUE가 비어있다면 어떤 I/O OPERATION이 끝나길 기다린다.
+만약 TIMERS가 스케쥴링되어있고 POLL PHASE가 끝났다면 microtasks가 실행되고 check phase로 넘어간다.
+
+-check phase : setimmediate()콜백만 실행되는 post I/O단계이다.
+이 단계는 poll phase가 실행되자마자 실행할 수 있는 코드를 담을 수 있다.
+위의 예시에서본 fs.readfile이 실행된 후에 어떤 코드를 바로 실행하고 싶다면 setimmediate를 활용할 수 있다.
+
+-close phase
+
+추가 분석
+-times phase callbacks
+setinterval()
+01 const logger = require('../common/logger');
+02 const ITERATIONS_MAX = 5;
+03 let iteration = 0;
+04 logger.info('START', 'MAINLINE');
+05 const timeout = setInterval(() => {
+06     logger.info('START: setInterval', 'TIMERS PHASE');
+07     if (iteration >= ITERATIONS_MAX) {
+08         logger.info('Max interval count exceeded. Goodbye.', 'TIMERS PHASE');
+09         // Kill the interval timer
+10        clearInterval(timeout);
+11     }
+12     iteration++;
+13     logger.info('END: setInterval', 'TIMERS PHASE');
+14 }, 10);
+15 logger.info('END', 'MAINLINE');
+
+해당코드의 실행 로그는?
+mainline에 있는 아래 코드들이 실행된 후 timeout이 eventloop의 timersphase에서 실행된다.
+04 logger.info('START', 'MAINLINE');
+15 logger.info('END', 'MAINLINE');
+clearInterval()이 실행될 때까지 지속한다.
+
+1 const logger = require('../common/logger');
+02 const ITERATIONS_MAX = 5;
+03 let iteration = 0;
+04 logger.info('START', 'MAINLINE');
+05 const timeout = setInterval(() => {
+06     logger.info('START: setInterval', 'TIMERS PHASE');
+07     if (iteration < ITERATIONS_MAX) {
+08         setTimeout(() => {
+09             logger.info('setInterval.setTimeout', 'TIMERS PHASE');
+10         });
+11     } else {
+12         logger.info('Max interval count exceeded. Goodbye.', 'TIMERS PHASE');
+13         clearInterval(timeout);
+14     }
+15     iteration++;
+
+자바스크립트 비동기 복습.
