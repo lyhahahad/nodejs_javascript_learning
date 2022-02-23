@@ -1,0 +1,37 @@
+https://developer.mozilla.org/ko/docs/Web/JavaScript/EventLoop
+코드의 실행, 이벤트의 수집과 처리, 큐에 대기 중인 하위 작업을 처리하는 이벤트 루프 기반으로 돌아감.
+
+function foo(b) {
+  let a = 10
+  return a + b + 11
+}
+function bar(x) {
+  let y = 3
+  return foo(x * y)
+}
+const baz = bar(7)
+stack은 foo->bar 이 순서로 쌓이고 foo에서 값이 반환되고 bar가 진행된다.
+
+-큐는 처리할 메시지의 대기열을 사용한다.
+각 메시지에는 메시지를 처리하기 위한 함수가 연결돼 있다.
+이벤트 루프는 가장 오래된 메시지부터 큐에서 꺼내고 메시지에 연결된 함수를 호출한다.
+호출로 인한 새로운 스택 프레임이 생성된다.
+함수처리는 스택이 빌 때까지 진행된다.
+큐에 메시지가 없을 때까지 진행한다.
+
+-이벤트루프 작동 방식은 아래와 같다.
+while(queue.waitForMessage()){
+  queue.processNextMessage();
+}
+waitForMessage는 현재 처리할 수 있는 메시지가 존재하지 않으면 새로운 메시지가 도착할 때까지 동기적으로 대기한다.
+
+-run to completion
+각 메시지의 처리는 다른 메시지의 처리를 시작하기 전에 완전히 끝난다.
+
+-메시지 추가하기.
+
+
+-논블로킹 : 자바스크립트는 절대 블로킹 연산을 하지 않는다.
+블로킹으로 진행됐다면 웹페이지는 한 가지 이벤트가 진행되는 동안 다른 이벤트를 진행할 수 없었을 것이다.
+web api의 반응을 기다리는 동안 다른 것들을 처리할 수 있다.
+
