@@ -43,7 +43,7 @@ console.log('MAINLINE: END');
 --------------------
 setTimeout, fs.readdir, setImmediate는 n번 째 setinterval 실행 이후 나온다. 
 순서는 타이머, 실행 만료 시점에 의해 결정되기 때문에 명확하지 않다.
-process.nextTick는 콜백 실행 후 바로 나오기 때문에 항상 해당 된 콜백의 출력과 같이 나옴.
+process.nextTick은 포함된 콜백의 출력 다음에 나온다. 그사이에 다른 콜백이 들올 수 있어 바로 붙어서 실행되지 않을 수 있다.
 setImmediate는 poll 콜백 큐가 비어있을 때 check로 넘어가서 실행되는 것이므로 fs.readdir 실행전에 실행될 수도 있다.
 --------------------
 setInterval start : 0
