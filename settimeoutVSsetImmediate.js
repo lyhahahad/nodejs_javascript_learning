@@ -9,6 +9,7 @@ setImmediate(() => {
 // timeout
 // immediate
 
+
 // immediate
 // timeout
 // 위의 두가지 결과가 모두 나올 수 있다.
