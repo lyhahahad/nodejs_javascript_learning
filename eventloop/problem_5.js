@@ -62,4 +62,5 @@ setImmediate은 check phase (poll의 큐가 유휴상태라면 바로 실행된�
 'fs.readdir() callback: Directory contains: 다음에 fs.readdir().Promise.resolve.then가 출력된다.
 setInterval.setImmediate 다음에 'setImmediate.Promise.resolve.then가 출력된다.
 다만 콜백으로 쌓여 있는 다른 실행이 있을 수 있기 때문에 바로 다음에 나오지는 않을 수 있다.
+또한 timers->poll->check순으로 순회한다.
 */
