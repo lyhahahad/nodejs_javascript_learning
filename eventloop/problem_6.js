@@ -39,3 +39,10 @@ eventEmitter.on('simpleEvent_2', (eventName, message, source, timestamp) => {
 eventEmitter.emit('simpleEvent_2', 'simpleEvent', 'Custom event says what?', 'MAINLINE', (hrtime[0] * 1e9 + hrtime[1]) / 1e6);
 
 console.log('END', 'MAINLINE');
+
+/*
+START MAINLINE
+Registering simpleEvent handler MAINLINE
+메인라인에서 while 문이 무한 반복되기 때문에 block된다.
+이런 코드는 주의 해야 한다.
+*/
