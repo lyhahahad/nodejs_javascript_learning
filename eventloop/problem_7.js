@@ -1,17 +1,17 @@
 // timeout_vs_immediate.js
-console.log("Main Line_1")
+// console.log("Main Line_1")
 
-setImmediate(() => {
-    console.log('immediate');
-  });
+// setImmediate(() => {
+//     console.log('immediate');
+//   });
 
-console.log("Main Line_2")
+// console.log("Main Line_2")
 
-setTimeout(() => {
-    console.log('timeout');
-  }, 10);
+// setTimeout(() => {
+//     console.log('timeout');
+//   }, 10);
 
-console.log("Main Line_3")
+// console.log("Main Line_3")
 
 /**
  * Main Line_1
@@ -30,8 +30,11 @@ console.log("Main Line_3")
      console.log('timeout');
    }, 0);
    setImmediate(() => {
-     console.log('immediate');
+     console.log('immediate_1');
    });
+   setImmediate(() => {
+    console.log('immediate_2');
+  });
  });
 
  /**
