@@ -14,7 +14,7 @@ microtasks실행 <br>
 3-c check phase : setimmediate 콜백 함수가 실행된다. poll phase가 유휴상태일 때 실행한다.<br>
 microtasks실행<br>
 5줄 요약 정리<br>
-# 2.stream + eventemitter<br>
+# 2.thread pool<br>
 
 참고 문서<br>
 https://developer.ibm.com/tutorials/learn-nodejs-the-event-loop/<br>
