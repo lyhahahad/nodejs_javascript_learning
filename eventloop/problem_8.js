@@ -36,5 +36,5 @@ someAsyncOperation(() => { //4
  * setimeout이 처음 실행됐을 때 local var에 timeoutScheduled 변수가 추가된다.
  * fs.readfile이 처음 실행되면 callback 함수가 local에 들어간다.
  * 타이머가 만료되면 timeout내의 함수가 실행된다.
- * 타이머 시간에 따라 위의 결과는 달라진다. 
+ * 타이머 시간에 따라 위의 결과는 달라진다. ㄴ
 */
