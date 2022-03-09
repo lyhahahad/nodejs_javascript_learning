@@ -24,4 +24,5 @@ console.log("mainline_3")
  * process.nextTick()
  * settimeout
  * process.nextTick() 콜백함수는 이벤트 루프의 다른 콜백들보다 항상 먼저 실행되기 때문에 재귀로 구현하게 되면 blocking이 발생할 수 있다.
+ * 이는 poll phase에 도달하지 못하게 해 i/o 실행을 못하게 될 수 있다.
  */
